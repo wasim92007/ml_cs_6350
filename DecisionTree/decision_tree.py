@@ -9,12 +9,13 @@ class Tree_Node(object):
     '''
     Node class for the ID3 algorithm
     '''
-    def __init__(self, node_name='root', node_val=None, attrib_name_col_dic=None, attrib_name_vals_dic=None, leaf_node=False, node_label=None, depth=0) -> None:
+    def __init__(self, node_name='root', node_val=None, node_median_val=None, attrib_name_col_dic=None, attrib_name_vals_dic=None, leaf_node=False, node_label=None, depth=0) -> None:
         '''
         Initializes the Tree_Node with default values
         '''
         self.node_name            = node_name
         self.node_val             = node_val
+        self.node_median_val      = node_median_val
         self.attrib_name_col_dic  = attrib_name_col_dic
         self.attrib_name_vals_dic = attrib_name_vals_dic
         self.children             = list()
@@ -45,6 +46,18 @@ class Tree_Node(object):
         Returns node value
         '''
         return self.node_val
+
+    def set_node_median_val(self, node_median_val):
+        '''
+        Sets the node median value
+        '''
+        self.node_median_val = node_median_val
+
+    def get_node_median_val(self):
+        '''
+        Returns node median value
+        '''
+        return self.node_median_val
 
     def set_depth(self, depth):
         '''
@@ -94,6 +107,8 @@ class Decision_Tree(object):
         self.entropy_func = entropy_func
         self.dtroot       = Tree_Node()
         self.train_ds     = None
+        self.num_def_val  = "Numeric"
+        self.numeric_col_list = None
 
         ## Internal attributes
         self.num_features         = None
@@ -192,9 +207,18 @@ class Decision_Tree(object):
         new_attrib_name_vals_dic = {attrib:attrib_vals for attrib, attrib_vals in attrib_name_vals_dic.items() if attrib != max_attrib}
         
         ## Iterate for each attrib value
-        for val in attrib_name_vals_dic[max_attrib]:
+        numeric_case = False
+        if isinstance(attrib_name_vals_dic[max_attrib], str) and attrib_name_vals_dic[max_attrib] == self.num_def_val:
+            numeric_case = True
+            attrib_vals = ['left', 'right']
+        else:
+            attrib_vals = attrib_name_vals_dic[max_attrib]
+        for val in attrib_vals:
             ## Split the dataset based on attribute value
-            sub_dataset[val] = split_based_on_attrib(attrib=max_attrib, val=val, attrib_name_col_dic=attrib_name_col_dic, dataset=dataset, return_dataset=True)
+            if numeric_case:
+                sub_dataset[val] = split_based_on_attrib(attrib=max_attrib, val=self.num_def_val, attrib_name_col_dic=attrib_name_col_dic, dataset=dataset, return_dataset=True, num_def_val=self.num_def_val, first_half=val=='left')
+            else:
+                sub_dataset[val] = split_based_on_attrib(attrib=max_attrib, val=val, attrib_name_col_dic=attrib_name_col_dic, dataset=dataset, return_dataset=True)
             
             child_node = Tree_Node()
             ## If we have some datapoint in the splitted dataset on the attrib value
@@ -204,15 +228,22 @@ class Decision_Tree(object):
             ## If we do not have any datapoint in the splitted dataset on the attrib value
             else:
                 #print(f'Dataset is empty returned label: {stats.mode(dataset[:,-1])[0][0]}')
+                child_node.set_node_name('leaf_node')
+                child_node.set_node_val('no_attrib_left')
+                child_node.children = list()
+                child_node.set_leaf_node(True)
                 majority_label = get_majority_label(dataset[:,-1])
                 child_node.set_node_label(majority_label)
                 child_node.set_depth(depth+1)
-                child_node.attrib_name_col_dic = attrib_name_col_dic
+                child_node.attrib_name_col_dic  = attrib_name_col_dic
                 child_node.attrib_name_vals_dic = new_attrib_name_vals_dic
 
             ## Modify some attributes of the child node
             child_node.set_node_name(max_attrib)
             child_node.set_node_val(val)
+            if numeric_case:
+                median_val = median_val = median(map(int,dataset[:,attrib_name_col_dic[max_attrib]]))
+                child_node.set_node_median_val(median_val)
 
             ## Append the child nodes to the parent nodes
             dt_root_node.children.append(child_node)
@@ -244,10 +275,28 @@ class Decision_Tree(object):
 
         return self.dtroot
 
-    def print_tree(self):
+    def print_tree_dfs(self, node=None, prefix=None):
+        if node:
+            root_node = node
+            prefix    = ":".join([prefix,str(root_node.node_name)+'_'+str(root_node.node_val)])
+        else:
+            root_node = self.dtroot
+            prefix    = "_".join([str(root_node.node_name), str(root_node.node_val)])
+
+        if root_node.children:
+            for child_node in root_node.children:
+                self.print_tree_dfs(node=child_node, prefix=prefix)
+        else:
+            print(f'{prefix}:{root_node.node_label}')
+        
+
+    def print_tree(self, dfs=False):
         '''
         Prints the Tree
         '''
+        if dfs:
+            return self.print_tree_dfs()
+
         stack = []
         stack.append(self.dtroot)
 
@@ -258,6 +307,7 @@ class Decision_Tree(object):
                 for child_node in root_node.children:
                     if child_node is not None:
                         stack.append(child_node)
+            
 
     def predict_datapoint(self, datapoint):
         '''
@@ -287,11 +337,74 @@ class Decision_Tree(object):
 
         test_ds = dataset[:,:self.num_features]
         predictions = []
-        for test_datapoint in test_ds:
+        for i, test_datapoint in enumerate(test_ds):
+            #print(f'Predicting datapoint:{i+1}/{len(test_ds)}')
             prediction = self.predict_datapoint(test_datapoint)
             test_datapoint = np.hstack((test_datapoint, [prediction]))
             predictions.append(test_datapoint)
 
         return np.array(predictions)
 
+    ## Sets the numeric column list
+    def set_numeric_col_list(self, numeric_col_list):
+        self.numeric_col_list = numeric_col_list
 
+    ## Gets the numeric column list
+    def get_numeric_col_list(self):
+        return self.numeric_col_list
+
+
+    '''
+    ## Stores the median values
+    def store_median_vals(self, dataset, col_attrib_name_dic):
+        train_ds_median = {}
+        for col in self.numeric_col_list:
+            train_ds_median[]
+    '''
+
+
+
+    def predict_datapoint_numeric(self, datapoint):
+        '''
+        Predict on test datapoint
+        '''
+        dtroot = self.dtroot
+
+        while not dtroot.leaf_node:
+            for child_node in dtroot.children:
+                if child_node:
+                    node_attrib     = child_node.node_name
+                    node_val        = child_node.node_val
+                    node_attrib_col = child_node.attrib_name_col_dic[node_attrib]
+
+                    if node_attrib_col in self.numeric_col_list:
+                        if int(datapoint[node_attrib_col]) <= child_node.node_median_val and node_val == 'left':
+                            dtroot = child_node
+                            break
+                        if int(datapoint[node_attrib_col]) > child_node.node_median_val and node_val == 'right':
+                            dtroot = child_node
+                            break
+                    else:
+                        if datapoint[node_attrib_col] == node_val:
+                            dtroot = child_node
+                            break
+
+        return dtroot.node_label
+
+    def predict_dataset_numeric(self, dataset):
+        '''
+        Predict on test dataset
+        '''
+        if len(dataset[0]) < self.num_features:
+            print(f'Test dataset does not have all the features')
+            return False
+
+        test_ds = dataset[:,:self.num_features]
+        predictions = []
+        for i, test_datapoint in enumerate(test_ds):
+            #print(f'Predicting datapoint:{i+1}/{len(test_ds)}')
+            prediction = self.predict_datapoint_numeric(test_datapoint)
+            test_datapoint = np.hstack((test_datapoint, [prediction]))
+            predictions.append(test_datapoint)
+
+        return np.array(predictions)

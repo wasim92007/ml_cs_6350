@@ -17,5 +17,30 @@ Proxy value to represent numeric attibute type
 Call the build tree function
 
 ## To test
-Call predict_datapoint or predict_dataset
+Call predict_datapoint() or predict_dataset()
 
+# For Adaboost, bagging and Random Forest
+## Takes input
+### AdaBoost
+Training dataset, test dataset, maximum depth and number of rounds
+### Bagging, Random Forest
+Maximum depth and, number of rounds
+
+
+## To train
+Call the --
+1. perform_adaboost, perform_bagging with training ds, weights, numeric column lsit, attribute name to column dictionary and positive negative lebel marker
+2. perform_random_forest with train and test dataset, weights, numeric column lsit, attribute name to column dictionary and positive negative lebel marker, number of maximum feature subset
+
+## To test
+Call predict_datapoint() or predict_dataset()
+
+# For LMS regression
+## Takes input
+learning rate, number of epochs, batch size
+
+## To train
+Call train() function with train dataset, till_converge (T/F), tolerance, use_sgd (T/F)
+
+## To test
+Call test_dataset()

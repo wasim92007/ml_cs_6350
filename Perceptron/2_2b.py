@@ -65,3 +65,32 @@ if __name__ == '__main__':
 
     ## Get error in percentage
     print(f'Test error percetage:{100-test_acc}')
+
+    
+
+    #### When using random shuffle
+    ## Train the Voted perceptron
+    print(f'Training with random shuffle enabled')
+
+    ## Initialize the Voted perceptron
+    voted_perceptron = Voted_Perceptron(num_epochs=num_epochs)
+
+    final_w_c = voted_perceptron.train(train_ds=train_ds, init_w=init_w, random_shuffle=True)
+
+    ## Print learned weight
+    n_dist_w_c = len(final_w_c)
+    print(f'Number of distict weight with random shuffle:{n_dist_w_c}')
+
+    for i in range(1, 6): ## Excluding first weight at it has count 0 for 0 init_w
+        print(f'i:{i}, weight:{final_w_c[i]["w"]}, count:{final_w_c[i]["c"]}')
+    for i in range(n_dist_w_c-1, n_dist_w_c-5, -1):
+        print(f'i:{i}, weight:{final_w_c[i]["w"]}, count:{final_w_c[i]["c"]}')
+
+    ## Predict on the test dataset
+    predictions = voted_perceptron.test(test_ds=test_ds)
+
+    ## Calculate average prediction error
+    test_acc = get_prediction_accuracy(predictions=predictions[:,-1], labels=test_ds[:,-1])
+
+    ## Get error in percentage
+    print(f'Test error percetage with random shuffle:{100-test_acc}')

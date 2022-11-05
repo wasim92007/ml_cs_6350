@@ -145,6 +145,9 @@ class Voted_Perceptron(Standard_Perceptron):
         if self.lr is None:
             self.lr = kwargs.get('learning_rate', 1)
 
+        ## Enable random shuffle
+        random_shuffle = kwargs.get('random_shuffle', False)
+
         ## Initial weight
         #print(f'init_w: {self.w}')
 
@@ -161,6 +164,10 @@ class Voted_Perceptron(Standard_Perceptron):
         ## Iterate over num_epochs
         for t in range(1, self.num_epochs+1):
             print(f'Trainning epoch {t}/{self.num_epochs}')
+
+            ## Random shuffle the datapoints
+            if random_shuffle:
+                random.shuffle(self.random_idexes)
 
             for idx in self.random_idexes:
 
@@ -256,6 +263,9 @@ class Average_Perceptron(Standard_Perceptron):
         if self.lr is None:
             self.lr = kwargs.get('learning_rate', 1)
 
+        ## Enable random shuffle
+        random_shuffle = kwargs.get('random_shuffle', False)
+
         ## Initial weight
         #print(f'init_w: {self.w}')
 
@@ -271,6 +281,11 @@ class Average_Perceptron(Standard_Perceptron):
         self.a_w = copy.deepcopy(self.w)
         for t in range(1, self.num_epochs+1):
             print(f'Trainning epoch {t}/{self.num_epochs}')
+
+            ## Random shuffle the datapoints
+            if random_shuffle:
+                random.shuffle(self.random_idexes)
+
 
             for idx in self.random_idexes:
 

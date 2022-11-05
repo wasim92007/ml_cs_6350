@@ -59,3 +59,27 @@ if __name__ == '__main__':
 
     ## Get error in percentage
     print(f'Test error percetage:{100-test_acc}')
+
+
+
+    #### When using random shuffle
+    ## Train the Voted perceptron
+    print(f'Training with random shuffle enabled')
+
+    ## Initialize the Average perceptron
+    avg_perceptron = Average_Perceptron(num_epochs=num_epochs)
+
+    ## Train the Average perceptron
+    final_a_w = avg_perceptron.train(train_ds=train_ds, init_w=init_w, random_shuffle=True)
+
+    ## Print learned weight
+    print(f'Final learned average weight with random shuffle:{final_a_w}')
+
+    ## Predict on the test dataset
+    predictions = avg_perceptron.test(test_ds=test_ds)
+
+    ## Calculate average prediction error
+    test_acc = get_prediction_accuracy(predictions=predictions[:,-1], labels=test_ds[:,-1])
+
+    ## Get error in percentage
+    print(f'Test error percetage with random shuffle:{100-test_acc}')
